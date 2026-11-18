@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>동명 알림장 · 준비물 알리미</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-title" content="알림장">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#fffdf6">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Jua&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --desk:#e9e2d0; --paper:#fffdf6; --line:#cfe0ee; --margin:#f2a7a1; --ink:#2b3a55; --pencil:#5b6475;
+    --red:#e0473a; --green:#2e8b57; --yellow:#fff3a8; --tab1:#ffd76e; --tab2:#9fd8c8;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--desk);color:var(--ink);font-family:'Gaegu',cursive;font-size:21px;-webkit-font-smoothing:antialiased;
+    background-image:radial-gradient(rgba(0,0,0,.035) 1px,transparent 1px);background-size:6px 6px}
+  .wrap{max-width:720px;margin:0 auto;padding:22px 16px 60px}
+
+  /* 책갈피 탭 */
+  .tabs{display:flex;gap:6px;padding-left:28px}
+  .tab{font-family:'Jua',sans-serif;font-size:17px;border:0;border-radius:12px 12px 0 0;padding:10px 18px 8px;cursor:pointer;color:var(--ink);background:#efe6cf;min-height:44px}
+  .tab[aria-selected="true"]{background:var(--tab1)}
+  .tab.set{margin-left:auto;background:var(--tab2)}
+
+  /* 공책 */
+  .note{position:relative;background:var(--paper);border-radius:6px 6px 14px 14px;box-shadow:0 2px 0 #d8cfb8,0 10px 24px rgba(80,60,20,.12);padding:34px 22px 30px 64px;min-height:400px}
+  .note::before{content:"";position:absolute;top:0;bottom:0;left:48px;width:2px;background:var(--margin)}
+  .rings{position:absolute;top:-12px;left:60px;right:30px;display:flex;justify-content:space-between;pointer-events:none}
+  .rings i{width:14px;height:26px;border-radius:8px;background:linear-gradient(#b9b9b9,#f2f2f2 45%,#9e9e9e);box-shadow:0 1px 1px rgba(0,0,0,.2)}
+
+  .head{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:6px}
+  .title{font-family:'Jua',sans-serif;font-size:30px;letter-spacing:6px;border:3px solid var(--ink);border-radius:10px;padding:2px 12px 0;background:#fff}
+  .date{font-size:24px;font-weight:700}
+  .date u{text-decoration:none;border-bottom:2px solid var(--ink);padding:0 4px}
+  .who{margin-left:auto;font-size:19px;color:var(--pencil)}
+
+  .lined{background-image:repeating-linear-gradient(transparent 0 43px,var(--line) 43px 45px);line-height:45px}
+  h2{font-family:'Jua',sans-serif;font-size:19px;font-weight:400;margin:22px 0 0;color:var(--pencil);line-height:45px}
+
+  /* 알림장 항목 */
+  ol.items{list-style:none;margin:0;padding:0;counter-reset:n}
+  ol.items li{counter-increment:n}
+  ol.items button{all:unset;cursor:pointer;display:flex;align-items:center;gap:10px;width:100%;min-height:45px;font-size:23px}
+  ol.items button::before{content:counter(n) ".";min-width:28px;font-weight:700}
+  ol.items .ck{width:26px;height:26px;border:2px solid var(--pencil);border-radius:50%;flex:none;position:relative;margin-left:auto}
+  ol.items .why{font-size:17px;color:var(--pencil)}
+  ol.items button[aria-pressed="true"] .txt{text-decoration:line-through;text-decoration-color:var(--red);text-decoration-thickness:2px;color:var(--pencil)}
+  ol.items button[aria-pressed="true"] .ck{border-color:var(--red)}
+  ol.items button[aria-pressed="true"] .ck::after{content:"✔";position:absolute;left:3px;top:-14px;font-size:28px;color:var(--red);transform:rotate(-8deg)}
+  .add{display:flex;align-items:center;gap:8px;min-height:45px}
+  .add input{all:unset;flex:1;font-family:'Gaegu',cursive;font-size:22px;color:var(--ink);min-height:40px}
+  .add input::placeholder{color:#a9b1c0}
+  .add button{font-family:'Jua',sans-serif;font-size:16px;border:2px solid var(--ink);background:#fff;border-radius:10px;padding:2px 12px;cursor:pointer;min-height:36px}
+  .x{all:unset;cursor:pointer;color:#a9b1c0;font-size:18px;padding:0 6px}
+
+  /* 시간표 */
+  .tt{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:10px;margin-top:8px;line-height:1.3}
+  .tt div{border:2px dashed #c9d3df;border-radius:12px;padding:8px 10px;background:#fff;text-align:center}
+  .tt b{display:block;font-family:'Jua',sans-serif;font-weight:400;font-size:15px;color:var(--pencil)}
+  .tt span{font-size:21px;font-weight:700}
+  .tt .em{font-size:22px;display:block}
+  .small{font-size:16px;color:var(--pencil);line-height:1.5;margin-top:8px}
+
+  /* 도장 */
+  .stamp{position:absolute;right:60px;top:-8px;z-index:2;width:118px;height:118px;border:5px double var(--red);border-radius:50%;color:var(--red);
+    display:grid;place-items:center;text-align:center;font-family:'Jua',sans-serif;font-size:22px;line-height:1.15;transform:rotate(-14deg) scale(.4);opacity:0;transition:.35s cubic-bezier(.3,1.6,.5,1);pointer-events:none;background:rgba(255,253,246,.6)}
+  .stamp small{display:block;font-size:13px}
+  .stamp.on{opacity:.9;transform:rotate(-14deg) scale(1)}
+
+  /* 알려드립니다 포스트잇 */
+  .post{position:relative;background:var(--yellow);margin:26px 6px 0 -20px;padding:16px 18px 14px;transform:rotate(-1.2deg);box-shadow:0 6px 12px rgba(0,0,0,.12);line-height:1.5}
+  .post::before{content:"";position:absolute;top:-10px;left:50%;width:90px;height:22px;margin-left:-45px;background:rgba(255,255,255,.6);transform:rotate(2deg)}
+  .post h3{font-family:'Jua',sans-serif;font-weight:400;font-size:19px;margin:0 0 6px}
+  .post ul{margin:0;padding:0;list-style:none}
+  .post li{display:flex;gap:10px;align-items:baseline;font-size:21px;padding:2px 0}
+  .post .d{font-family:'Jua',sans-serif;font-size:16px;min-width:58px;color:var(--ink)}
+  .post .d.hot{color:var(--red)}
+  .post li small{font-size:16px;color:var(--pencil)}
+
+  .msg{color:var(--pencil);font-size:20px}
+
+  /* 설정 */
+  .setting{background:var(--paper);border-radius:14px;padding:18px 20px;margin:0 0 14px;box-shadow:0 2px 0 #d8cfb8;font-size:19px}
+  .fold{padding:0}
+  .fold summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:14px 20px;font-family:'Jua',sans-serif;font-size:19px;min-height:52px}
+  .fold summary::-webkit-details-marker{display:none}
+  .fold .sum{font-family:'Gaegu',cursive;font-size:19px;color:var(--pencil);flex:1}
+  .fold .arrow{transition:transform .2s;font-size:16px}
+  .fold[open] .arrow{transform:rotate(180deg)}
+  .fold form{padding:0 20px 18px}
+  .setting h3{font-family:'Jua',sans-serif;font-weight:400;margin:0 0 8px;font-size:20px}
+  .setting .row{display:grid;grid-template-columns:1fr 1.3fr;gap:10px;align-items:center;padding:6px 0;border-bottom:1px dashed #d9d2bf}
+  .setting small{display:block;font-size:15px;color:var(--pencil)}
+  .setting select,.setting input,.setting textarea{font-family:'Gaegu',cursive;font-size:20px;border:2px solid #d9d2bf;border-radius:10px;padding:6px 10px;width:100%;min-height:44px;background:#fff;color:var(--ink)}
+  .setting textarea{min-height:220px;line-height:1.5;margin-top:6px}
+  .setting .save{font-family:'Jua',sans-serif;font-size:17px;border:0;background:var(--ink);color:#fff;border-radius:12px;padding:10px 18px;cursor:pointer;min-height:44px}
+  .tab.set2{background:#c9d8f5}
+  .rule{display:grid;grid-template-columns:minmax(120px,1fr) 1.6fr 40px;gap:8px;align-items:center;padding:5px 0}
+  .rule .del{border:0;background:none;font-size:20px;cursor:pointer;color:var(--pencil);min-height:44px}
+  .addrow,.ghost{font-family:'Jua',sans-serif;font-size:16px;border:2px dashed #b9b09a;background:#fff;color:var(--ink);border-radius:12px;padding:8px 14px;cursor:pointer;min-height:44px;margin-top:6px}
+  .ghost{border-style:solid;border-color:#d9d2bf}
+  .hint2{font-size:16px;color:var(--pencil);margin:0 0 10px}
+  .sharebox{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
+  .qr{width:210px;height:210px;background:#fff;border:2px solid #d9d2bf;border-radius:12px;padding:8px;flex:none}
+  .qr svg{width:100%;height:100%;display:block}
+  .qr:empty{display:none}
+  .testday{margin:0;color:var(--red);font-weight:700;font-size:22px;line-height:45px}
+  ul.tests{list-style:none;margin:0;padding:0}
+  ul.tests li{display:flex;align-items:center;gap:10px;min-height:45px;font-size:22px}
+  ul.tests .d{font-family:'Jua',sans-serif;font-size:16px;min-width:56px;text-align:center;border:2px solid var(--ink);border-radius:8px;line-height:1.5}
+  ul.tests .d.hot{border-color:var(--red);color:#fff;background:var(--red)}
+  ul.tests small{font-size:17px;color:var(--pencil)}
+  ul.tests .del{all:unset;cursor:pointer;margin-left:auto;color:#a9b1c0;font-size:18px;padding:0 6px}
+  .testadd{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:6px 0}
+  .testadd input,.testadd select{font-family:'Gaegu',cursive;font-size:19px;border:2px solid #d9d2bf;border-radius:10px;padding:4px 8px;min-height:40px;background:#fff;color:var(--ink)}
+  .testadd #tWhat{flex:1;min-width:140px}
+  .testadd select{width:130px}
+  .testadd input[type=date]{width:150px}
+  .testadd button{font-family:'Jua',sans-serif;font-size:16px;border:2px solid var(--ink);background:#fff;border-radius:10px;padding:4px 14px;cursor:pointer;min-height:40px}
+  footer{color:#8b836e;font-size:15px;text-align:center;margin-top:22px;line-height:1.5;font-family:system-ui,sans-serif}
+  [hidden]{display:none!important}
+  @media (max-width:520px){ .note{padding:30px 14px 26px 50px} .note::before{left:38px} .stamp{width:96px;height:96px;font-size:18px;right:44px;top:-4px} .post{margin-left:-10px} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <details class="setting fold" id="setting">
+    <summary><span>✏️ 내 정보</span><span class="sum" id="sum"></span><span class="arrow">▾</span></summary>
+    <form id="form">
+      <div class="row"><label for="gc">우리 반</label><select id="gc">
+        <option value="1-1">1학년 1반</option><option value="1-2">1학년 2반</option><option value="1-3">1학년 3반</option>
+        <option value="2-1">2학년 1반</option><option value="2-2">2학년 2반</option><option value="2-3">2학년 3반</option>
+        <option value="3-1">3학년 1반</option><option value="3-2">3학년 2반</option></select></div>
+      <div class="row" id="trackRow"><label for="track">내 특성화 과목</label>
+        <select id="track"><option value="">골라 주세요</option><option value="연주와 창작">연주와 창작</option><option value="영상 창작">영상 창작</option></select></div>
+      <p style="margin:12px 0 2px">과목별 준비물<small id="rulesHint">과목을 고르고 준비물을 쉼표(,)로 나눠 적어요</small></p>
+      <div id="ruleRows"></div>
+      <button type="button" class="addrow" id="addRule">＋ 과목 추가</button>
+      <div style="margin-top:12px;text-align:right"><button class="save" type="submit">다 적었어요!</button></div>
+    </form>
+  </details>
+
+  <section class="setting" id="incoming" hidden>
+    <h3>📩 친구가 보낸 알림장이 도착했어요</h3>
+    <p id="incomingText" style="margin:0 0 10px"></p>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button type="button" class="ghost" id="inNo">괜찮아요</button>
+      <button type="button" class="save" id="inYes">내 알림장에 넣기</button>
+    </div>
+  </section>
+
+  <section class="setting" id="sharePanel" hidden>
+    <h3>📤 같은 반 친구에게 보내기</h3>
+    <p class="hint2">우리 반 과목별 준비물과 수행평가 일정이 함께 가요. 친구가 링크를 열면 자기 알림장에 넣을 수 있어요.</p>
+    <div class="sharebox">
+      <div id="qr" class="qr"></div>
+      <div style="flex:1;min-width:220px">
+        <input id="shareLink" readonly>
+        <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+          <button type="button" class="save" id="btnCopy">링크 복사</button>
+          <button type="button" class="ghost" id="btnNative" hidden>카톡 등으로 보내기</button>
+        </div>
+        <p class="hint2" id="copyMsg" style="min-height:1.5em"></p>
+      </div>
+    </div>
+  </section>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" id="tabToday" aria-selected="false">오늘</button>
+    <button class="tab" role="tab" id="tabNext" aria-selected="true">다음 등교일</button>
+    <button class="tab set" id="btnShare">📤 친구에게</button>
+  </div>
+
+  <article class="note">
+    <div class="rings"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+
+    <div class="head">
+      <span class="title">알림장</span>
+      <span class="date" id="date">-</span>
+      <span class="who" id="who"></span>
+    </div>
+
+    <h2>📌 챙겨 올 것</h2>
+    <div class="lined" style="position:relative">
+      <div class="stamp" id="stamp"><div>★<br>참 잘했어요<small>가방 준비 끝!</small></div></div>
+      <p class="testday" id="testToday" hidden></p>
+      <ol class="items" id="items"><li class="msg">불러오는 중…</li></ol>
+    </div>
+
+    <h2>📚 시간표</h2>
+    <div class="tt" id="tt"></div>
+    <p class="small" id="ttNote" hidden></p>
+
+    <h2>📝 수행평가</h2>
+    <p class="small" id="syncNote" hidden></p>
+    <div class="lined">
+      <ul class="tests" id="tests"></ul>
+      <form class="testadd" id="testForm">
+        <input type="date" id="tDate" aria-label="날짜" required>
+        <select id="tSubj" aria-label="과목" required></select>
+        <input id="tWhat" maxlength="30" placeholder="무엇을? (예: 음악줄넘기)" aria-label="내용">
+        <button type="submit">적기</button>
+      </form>
+    </div>
+
+    <div class="post">
+      <h3>📢 알려드립니다</h3>
+      <ul id="dday"><li class="msg">불러오는 중…</li></ul>
+    </div>
+  </article>
+
+  <footer>시간표·학사일정: 나이스 교육정보 개방 포털 · 시간표가 바뀌었을 수 있으니 담임선생님 안내를 꼭 확인하세요.</footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+<script src="config.js"></script>
+<script>
+const OFFICE = 'G10', SCHOOL = '7441032';
+// 선생님 설정은 config.js 파일에서 해요 (나이스 인증키, 우리 반 공유 주소).
+const CONF = window.ALRIM_CONFIG || {};
+const NEIS_KEY = String(CONF.NEIS_KEY || '').trim();
+const SHARE_URL = String(CONF.SHARE_URL || '').trim();
+const NEIS = 'https://open.neis.go.kr/hub/';
+const DEFAULT_RULES = [
+  ['체육', '체육복, 운동화'],
+  ['연주와 창작', '악기'],
+  ['영상 창작', '태블릿 충전']
+].map(([subj, items]) => ({ subj, items }));
+const SUBJECTS = ['국어','사회','역사','도덕','수학','과학','기술·가정','정보','체육','음악','미술','영어',
+  '연주와 창작','영상 창작','4차산업혁명과 크리에이팅','진로와 직업','보건','종교와 문화','생활일본어','생활중국어','동아리','자율·자치'];
+const ALWAYS = ['필통'];
+const EMOJI = [['체육','🏃'],['연주','🎹'],['음악','🎵'],['영상','🎬'],['미술','🎨'],['과학','🔬'],['수학','📐'],['국어','📖'],['영어','🔤'],
+  ['사회','🌏'],['역사','🏛️'],['도덕','🤝'],['기술','🔧'],['정보','💻'],['진로','🧭'],['특성화','🎼'],['4차','🤖'],['창체','🌱'],['자율','🌱'],['동아리','🧩']];
+const emojiOf = s => (EMOJI.find(([k]) => s.includes(k)) || [,'📘'])[1];
+
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+};
+let cfg = Object.assign({ grade:'1', cls:'1', track:'', rules:DEFAULT_RULES }, store.get('bag-cfg', {}));
+delete cfg.key;
+// 예전 글자형 규칙(「과목: 준비물」)을 표 형태로 바꿈
+if (typeof cfg.rules === 'string') cfg.rules = cfg.rules.split('\n').map(l => l.split(/[:：]/)).filter(p => p.length >= 2 && p[0].trim())
+  .map(([k, ...v]) => ({ subj: k.trim(), items: v.join(':').trim() }));
+if (!Array.isArray(cfg.rules) || !cfg.rules.length) cfg.rules = DEFAULT_RULES;
+let seenSubjects = new Set(store.get('bag-seen-subjects', []));
+let mode = 'next';
+let current = { day: null, items: [] };   // items: [{text, why}]
+
+const $ = id => document.getElementById(id);
+const pad = n => String(n).padStart(2,'0');
+const ymd = d => d.getFullYear() + pad(d.getMonth()+1) + pad(d.getDate());
+const fromYmd = s => new Date(+s.slice(0,4), +s.slice(4,6)-1, +s.slice(6,8));
+const WD = ['일','월','화','수','목','금','토'];
+const short = d => `${d.getMonth()+1}/${d.getDate()}(${WD[d.getDay()]})`;
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const isWeekday = d => d.getDay() >= 1 && d.getDay() <= 5;
+const today0 = () => { const d = new Date(); d.setHours(0,0,0,0); return d; };
+
+function targetDay(){
+  const d = today0();
+  if (mode === 'today') return d;
+  do { d.setDate(d.getDate()+1); } while (!isWeekday(d));
+  return d;
+}
+
+async function neis(service, params){
+  const key = NEIS_KEY ? `&KEY=${encodeURIComponent(NEIS_KEY)}` : '';
+  const size = NEIS_KEY ? 100 : 5;
+  const url = `${NEIS}${service}?Type=json&pSize=${size}&ATPT_OFCDC_SC_CODE=${OFFICE}&SD_SCHUL_CODE=${SCHOOL}${key}&${params}`;
+  const j = await (await fetch(url)).json();
+  return j[service] ? j[service][1].row : [];
+}
+
+// ---------- 준비물 규칙 ----------
+const norm = t => String(t).replace(/[\sⅠⅡⅢ·]/g, '');
+function parseRules(list){
+  return list.filter(r => r.subj && r.items).map(r => ({ key: r.subj, items: r.items.split(',').map(x => x.trim()).filter(Boolean) }));
+}
+const needsOf = (subj, rules) => rules.filter(r => norm(subj).includes(norm(r.key))).flatMap(r => r.items);
+
+// ---------- 시간표 ----------
+async function loadTimetable(day){
+  let rows = await neis('misTimetable', `ALL_TI_YMD=${ymd(day)}&GRADE=${cfg.grade}&CLASS_NM=${cfg.cls}`);
+  rows = rows.map(r => ({ per: +r.PERIO, subj: r.ITRT_CNTNT.trim() }));
+  // 특성화는 한 사람이 한 과목만 들음: 시간표에 어느 쪽이 떠도 내가 고른 과목으로 바꿈
+  const TRACK = /^(연주와\s*창작|영상\s*창작)\s*/;
+  rows = rows.map(r => TRACK.test(r.subj)
+    ? { per: r.per, subj: ((cfg.grade !== '3' && cfg.track) || '특성화') + (r.subj.replace(TRACK, '') ? ' ' + r.subj.replace(TRACK, '').trim() : ''), track: !cfg.track }
+    : r);
+  const byPer = new Map();
+  rows.sort((a, b) => a.per - b.per).forEach(r => {
+    if (!byPer.has(r.per)) byPer.set(r.per, []);
+    if (!byPer.get(r.per).includes(r.subj)) byPer.get(r.per).push(r.subj);
+  });
+  return [...byPer.entries()].map(([per, subs]) => ({ per, subs }));
+}
+
+// ---------- 학사일정 ----------
+let scheduleCache = null;
+async function loadSchedule(){
+  if (scheduleCache) return scheduleCache;
+  const start = today0(), end = new Date(start); end.setDate(end.getDate() + 120);
+  let rows = [];
+  if (NEIS_KEY){
+    rows = await neis('SchoolSchedule', `AA_FROM_YMD=${ymd(start)}&AA_TO_YMD=${ymd(end)}`);
+  } else {
+    // 인증키가 없으면 한 번에 5개까지만 와서, 평일(월~금) 구간으로 나누어 여러 번 불러옴
+    const jobs = [];
+    const mon = new Date(start); mon.setDate(mon.getDate() - ((mon.getDay()+6)%7));
+    for (let w = 0; w < 10; w++){
+      const a = new Date(mon); a.setDate(a.getDate() + w*7);
+      const b = new Date(a); b.setDate(b.getDate() + 4);
+      jobs.push(neis('SchoolSchedule', `AA_FROM_YMD=${ymd(a < start ? start : a)}&AA_TO_YMD=${ymd(b)}`).catch(() => []));
+    }
+    rows = (await Promise.all(jobs)).flat();
+  }
+  const seen = new Set();
+  scheduleCache = rows
+    .filter(r => r.EVENT_NM && !/토요휴업일/.test(r.EVENT_NM))
+    .map(r => ({ date: fromYmd(r.AA_YMD), name: r.EVENT_NM.trim() }))
+    .filter(e => { const k = ymd(e.date) + e.name; if (seen.has(k)) return false; seen.add(k); return e.date >= start; })
+    .sort((a, b) => a.date - b.date);
+  return scheduleCache;
+}
+
+// ---------- 알림장 항목 ----------
+const kCheck = d => `bag-check-${cfg.grade}-${cfg.cls}-${ymd(d)}`;
+
+function renderItems(){
+  const { day, items } = current;
+  const all = items;
+  const done = new Set(store.get(kCheck(day), []));
+  $('items').innerHTML = all.length ? all.map(it =>
+    `<li><button type="button" data-t="${esc(it.text)}" aria-pressed="${done.has(it.text)}">
+      <span class="txt">${esc(it.text)} 챙기기</span>${it.why ? `<span class="why">(${esc(it.why)})</span>` : ''}
+<span class="ck"></span></button></li>`).join('')
+    : '<li class="msg">챙길 것이 없어요.</li>';
+  const finished = all.length > 0 && all.every(i => done.has(i.text));
+  $('stamp').classList.toggle('on', finished);
+}
+$('items').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  const done = new Set(store.get(kCheck(current.day), []));
+  done.has(b.dataset.t) ? done.delete(b.dataset.t) : done.add(b.dataset.t);
+  store.set(kCheck(current.day), [...done]);
+  renderItems();
+});
+
+async function renderDay(){
+  const day = targetDay();
+  current = { day, items: [] };
+  $('date').innerHTML = `<u>${day.getMonth()+1}</u>월 <u>${day.getDate()}</u>일 <u>${WD[day.getDay()]}</u>요일`;
+  $('who').textContent = `${cfg.grade}학년 ${cfg.cls}반`;
+  $('ttNote').hidden = true;
+  if (!isWeekday(day)){
+    $('tt').innerHTML = '<p class="msg">주말이에요. ‘다음 등교일’을 눌러 보세요.</p>';
+    renderItems(); return;
+  }
+  $('tt').innerHTML = '<p class="msg">불러오는 중…</p>';
+  let tt = [];
+  try{ tt = await loadTimetable(day); }catch(e){
+    $('tt').innerHTML = '<p class="msg">시간표를 불러오지 못했어요. 인터넷 연결을 확인해 주세요.</p>';
+    renderItems(); return;
+  }
+  if (!tt.length){
+    $('tt').innerHTML = '<p class="msg">이 날은 시간표가 없어요. 휴업일이거나 아직 등록되지 않았어요.</p>';
+    renderItems(); return;
+  }
+  const rules = parseRules(cfg.rules);
+  tt.forEach(p => p.subs.forEach(x => seenSubjects.add(x.replace(/[ⅠⅡⅢ]/g,'').trim())));
+  store.set('bag-seen-subjects', [...seenSubjects]);
+  $('tt').innerHTML = tt.map(p =>
+    `<div><b>${p.per}교시</b><span class="em">${emojiOf(p.subs[0])}</span><span>${p.subs.map(esc).join(' / ')}</span></div>`).join('');
+
+  // 준비물 + 어느 시간 때문인지
+  const map = new Map();
+  tt.forEach(p => p.subs.forEach(s => needsOf(s, rules).forEach(it => {
+    if (!map.has(it)) map.set(it, []);
+    const tag = `${p.per}교시 ${s.replace(/[ⅠⅡⅢ]/g,'').trim()}`;
+    if (!map.get(it).includes(tag)) map.get(it).push(tag);
+  })));
+  ALWAYS.forEach(it => { if (!map.has(it)) map.set(it, []); });
+  current.items = [...map.entries()].map(([text, why]) => ({ text, why: why.join(', ') }));
+  renderItems();
+  const notes = [];
+  if (!cfg.track && cfg.grade !== '3' && tt.some(p => p.subs.some(x => x.startsWith('특성화'))))
+    notes.push('※ ✏️ 내 정보에서 내 특성화 과목(연주와 창작 / 영상 창작)을 고르면 준비물이 맞게 나와요.');
+  if (!NEIS_KEY) notes.push('※ 지금은 앞쪽 교시만 보일 수 있어요.');
+  $('ttNote').hidden = !notes.length;
+  $('ttNote').innerHTML = notes.join('<br>');
+}
+
+async function renderSchedule(){
+  try{
+    const list = (await loadSchedule()).slice(0, 4);
+    const t = today0();
+    $('dday').innerHTML = list.length ? list.map(e => {
+      const n = Math.round((e.date - t) / 86400000);
+      return `<li><span class="d ${n <= 3 ? 'hot' : ''}">${n === 0 ? 'D-DAY' : 'D-' + n}</span><span>${esc(e.name)} <small>${short(e.date)}</small></span></li>`;
+    }).join('') : '<li class="msg">다가오는 일정이 없어요.</li>';
+  }catch(e){
+    $('dday').innerHTML = '<li class="msg">학사일정을 불러오지 못했어요.</li>';
+  }
+}
+
+// ---------- 과목별 준비물 표 ----------
+function subjectOptions(selected){
+  const all = [...new Set([...SUBJECTS, ...seenSubjects, selected].filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ko'));
+  return '<option value="">과목 고르기</option>' + all.map(x => `<option ${x === selected ? 'selected' : ''}>${esc(x)}</option>`).join('');
+}
+function ruleRow(r){
+  return `<div class="rule"><select aria-label="과목">${subjectOptions(r.subj)}</select>
+    <input aria-label="준비물" value="${esc(r.items || '')}" placeholder="예: 체육복, 운동화">
+    <button type="button" class="del" title="이 줄 지우기">🗑</button></div>`;
+}
+function drawRules(list){ $('ruleRows').innerHTML = list.map(ruleRow).join(''); }
+function readRules(){
+  return [...$('ruleRows').querySelectorAll('.rule')]
+    .map(row => ({ subj: row.querySelector('select').value, items: row.querySelector('input').value.trim() }))
+    .filter(r => r.subj && r.items);
+}
+$('addRule').onclick = () => {
+  $('ruleRows').insertAdjacentHTML('beforeend', ruleRow({ subj:'', items:'' }));
+  $('ruleRows').lastElementChild.querySelector('select').focus();
+};
+$('ruleRows').addEventListener('click', e => { const d = e.target.closest('.del'); if (d) d.parentElement.remove(); });
+
+// ---------- 친구에게 보내기 (링크·QR) ----------
+// 특성화 선택은 개인 설정이라 보내지 않음
+const enc = obj => btoa(unescape(encodeURIComponent(JSON.stringify(obj)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+const dec = str => JSON.parse(decodeURIComponent(escape(atob(str.replace(/-/g,'+').replace(/_/g,'/')))));
+function shareLink(){
+  const payload = { v:1, g:cfg.grade, c:cfg.cls, r:cfg.rules.map(r => [r.subj, r.items]), p:upcomingTests().map(x => [x.date, x.subj, x.what]) };
+  return location.origin + location.pathname + '?a=' + enc(payload);
+}
+function openShare(open){
+  $('sharePanel').hidden = !open;
+  if (!open) return;
+  openSetting(false);
+  const link = shareLink();
+  $('shareLink').value = link;
+  $('copyMsg').textContent = '';
+  $('qr').innerHTML = '';
+  try{
+    if (window.qrcode){ const q = qrcode(0, 'L'); q.addData(link); q.make(); $('qr').innerHTML = q.createSvgTag(4, 0); }
+  }catch(e){ $('qr').innerHTML = ''; }
+  $('btnNative').hidden = !navigator.share;
+}
+$('btnShare').onclick = () => openShare($('sharePanel').hidden);
+$('btnCopy').onclick = async () => {
+  const link = $('shareLink').value;
+  try{ await navigator.clipboard.writeText(link); }
+  catch(e){ $('shareLink').select(); try{ document.execCommand('copy'); }catch(_){} }
+  $('copyMsg').textContent = '복사했어요! 반 단톡방에 붙여 넣어요 📋';
+};
+$('btnNative').onclick = async () => {
+  try{ await navigator.share({ title:`${cfg.grade}학년 ${cfg.cls}반 알림장`, text:'우리 반 준비물 알림장이야! 열어서 내 알림장에 넣어 봐 🎒', url:$('shareLink').value }); }catch(e){}
+};
+
+let incoming = null;
+function checkIncoming(){
+  const a = new URLSearchParams(location.search).get('a');
+  if (!a) return;
+  try{ incoming = dec(a); }catch(e){ incoming = null; }
+  if (!incoming || !Array.isArray(incoming.r)){ clearIncoming(); return; }
+  $('incomingText').innerHTML = `<b>${esc(incoming.g)}학년 ${esc(incoming.c)}반</b> 과목별 준비물 ${incoming.r.length}개` +
+    (Array.isArray(incoming.p) && incoming.p.length ? `, 수행평가 ${incoming.p.length}개` : '');
+  $('incoming').hidden = false;
+}
+function clearIncoming(){
+  $('incoming').hidden = true;
+  try{ history.replaceState(null, '', location.pathname); }catch(e){}
+}
+$('inNo').onclick = clearIncoming;
+$('inYes').onclick = () => {
+  const merged = new Map(cfg.rules.map(r => [r.subj, r.items]));
+  incoming.r.forEach(([subj, items]) => { if (subj && items) merged.set(String(subj), String(items)); });
+  cfg.grade = String(incoming.g || cfg.grade); cfg.cls = String(incoming.c || cfg.cls);
+  if (cfg.grade === '3') cfg.track = '';
+  cfg.rules = [...merged.entries()].map(([subj, items]) => ({ subj, items }));
+  if (Array.isArray(incoming.p)){
+    const k = `bag-tests-${cfg.grade}-${cfg.cls}`, list = store.get(k, []);
+    incoming.p.forEach(([date, subj, what]) => {
+      if (/^\d{8}$/.test(String(date)) && subj && !list.some(x => x.date === date && x.subj === subj && x.what === (what || '')))
+        list.push({ id: Math.random().toString(36).slice(2, 9), date: String(date), subj: String(subj), what: String(what || '') });
+    });
+    store.set(k, list);
+  }
+  store.set('bag-cfg', cfg);
+  clearIncoming();
+  render();
+};
+
+// ---------- 수행평가 ----------
+const shared = () => !!SHARE_URL;
+const gcOf = () => `${cfg.grade}-${cfg.cls}`;
+const kTests = () => (shared() ? 'bag-class-tests-' : 'bag-tests-') + `${cfg.grade}-${cfg.cls}`;
+const getTests = () => store.get(kTests(), []);
+
+// ---------- 우리 반 공유 (구글 앱스크립트) ----------
+let syncOk = null;
+async function pull(){ return (await fetch(`${SHARE_URL}?gc=${gcOf()}`)).json(); }
+async function api(body){
+  const r = await fetch(SHARE_URL, { method:'POST', body: JSON.stringify(Object.assign({ gc: gcOf() }, body)) });
+  return r.json();
+}
+function applyServer(d){
+  if (!d || !d.ok) throw new Error(d && d.error || '서버 오류');
+  store.set(kTests(), d.tests || []);
+  if (d.hasRules){ cfg.rules = d.rules; store.set('bag-cfg', cfg); }
+  syncOk = true;
+}
+function showSync(){
+  const el = $('syncNote');
+  if (!shared()){ el.hidden = true; return; }
+  el.hidden = false;
+  el.textContent = syncOk === false ? '⚠️ 연결이 안 돼서 이 기기에 저장된 내용을 보여줘요' : '☁️ 우리 반 친구들과 함께 보는 내용이에요';
+}
+async function sync(){
+  if (!shared()) return;
+  const before = JSON.stringify([cfg.rules, getTests()]);
+  try{ applyServer(await pull()); }catch(e){ syncOk = false; }
+  showSync();
+  if (JSON.stringify([cfg.rules, getTests()]) !== before){ updateSum(); renderDay().then(renderTests); }
+}
+function upcomingTests(){
+  const t = ymd(today0());
+  return getTests().filter(x => x.date >= t).sort((a, b) => a.date.localeCompare(b.date));
+}
+function renderTests(){
+  const t = today0();
+  const list = upcomingTests();
+  $('tests').innerHTML = list.length ? list.map(x => {
+    const n = Math.round((fromYmd(x.date) - t) / 86400000);
+    return `<li><span class="d ${n <= 3 ? 'hot' : ''}">${n === 0 ? 'D-DAY' : 'D-' + n}</span>
+      <span>${esc(x.subj)}${x.what ? ' · ' + esc(x.what) : ''} <small>${short(fromYmd(x.date))}</small></span>
+      <button type="button" class="del" data-id="${esc(x.id)}" title="지우기">✕</button></li>`;
+  }).join('') : '<li class="msg">적어 둔 수행평가가 없어요.</li>';
+  $('tSubj').innerHTML = subjectOptions($('tSubj').value).replace('과목 고르기', '과목');
+  if (!$('tDate').value && current.day){ const d = current.day; $('tDate').value = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
+  // 알림장 날짜에 수행평가가 있으면 맨 위에 빨간 글씨로
+  const day = current.day ? ymd(current.day) : '';
+  const todays = list.filter(x => x.date === day);
+  $('testToday').hidden = !todays.length;
+  $('testToday').textContent = todays.length ? '📝 수행평가 있는 날! ' + todays.map(x => x.subj + (x.what ? `(${x.what})` : '')).join(', ') : '';
+}
+$('testForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const date = $('tDate').value.replace(/-/g, ''), subj = $('tSubj').value;
+  if (!date || !subj) return;
+  const test = { id: Date.now().toString(36), date, subj, what: $('tWhat').value.trim() };
+  if (shared()){
+    const btn = $('testForm').querySelector('button');
+    btn.disabled = true; btn.textContent = '저장 중…';
+    api({ action:'addTest', test }).then(applyServer).then(() => { $('tWhat').value = ''; })
+      .catch(() => { syncOk = false; alertSoft('저장하지 못했어요. 인터넷 연결을 확인해 주세요.'); })
+      .finally(() => { btn.disabled = false; btn.textContent = '적기'; showSync(); renderTests(); });
+    return;
+  }
+  const list = getTests();
+  list.push(test);
+  store.set(kTests(), list);
+  $('tWhat').value = '';
+  renderTests();
+});
+function alertSoft(msg){ const el = $('syncNote'); el.hidden = false; el.textContent = '⚠️ ' + msg; }
+$('tests').addEventListener('click', e => {
+  const b = e.target.closest('.del'); if (!b) return;
+  if (shared()){
+    b.textContent = '…';
+    api({ action:'delTest', id: b.dataset.id }).then(applyServer)
+      .catch(() => { syncOk = false; alertSoft('지우지 못했어요. 인터넷 연결을 확인해 주세요.'); })
+      .finally(() => { showSync(); renderTests(); });
+    return;
+  }
+  store.set(kTests(), getTests().filter(x => x.id !== b.dataset.id));
+  renderTests();
+});
+
+// ---------- 설정 ----------
+function fillForm(){
+  $('rulesHint').textContent = shared() ? '여기서 고치면 우리 반 친구들 알림장도 함께 바뀌어요' : '과목을 고르고 준비물을 쉼표(,)로 나눠 적어요';
+  $('gc').value = `${cfg.grade}-${cfg.cls}`; $('track').value = cfg.track; drawRules(cfg.rules);
+  $('trackRow').hidden = cfg.grade === '3';
+}
+function openSetting(open){ $('setting').open = open; }
+$('setting').addEventListener('toggle', () => {
+  if ($('setting').open){ $('sharePanel').hidden = true; fillForm(); }
+});
+function updateSum(){
+  $('sum').textContent = `${cfg.grade}학년 ${cfg.cls}반` + (cfg.grade !== '3' ? ` · ${cfg.track || '특성화 미선택'}` : '') + ` · 준비물 ${cfg.rules.length}과목`;
+}
+$('gc').onchange = () => { $('trackRow').hidden = $('gc').value.startsWith('3'); };
+$('form').addEventListener('submit', e => {
+  e.preventDefault();
+  const [grade, cls] = $('gc').value.split('-');
+  const rules = readRules();
+  const sameClass = grade === cfg.grade && cls === cfg.cls;
+  const rulesChanged = JSON.stringify(rules) !== JSON.stringify(cfg.rules);
+  cfg = { grade, cls, track: grade === '3' ? '' : $('track').value, rules };
+  store.set('bag-cfg', cfg);
+  openSetting(false);
+  // 반을 바꾼 경우엔 그 반의 공유 내용을 먼저 불러오고, 같은 반에서 준비물을 고친 경우에만 반 전체에 저장
+  if (shared() && sameClass && rulesChanged){
+    api({ action:'setRules', rules }).then(applyServer).catch(() => { syncOk = false; }).finally(() => { showSync(); render(); });
+    return;
+  }
+  render();
+});
+function setTab(m){
+  mode = m;
+  $('tabToday').setAttribute('aria-selected', m === 'today');
+  $('tabNext').setAttribute('aria-selected', m === 'next');
+  renderDay().then(renderTests);
+}
+$('tabToday').onclick = () => setTab('today');
+$('tabNext').onclick = () => setTab('next');
+
+function render(){ updateSum(); renderDay().then(renderTests); renderTests(); renderSchedule(); sync(); }
+$('btnShare').hidden = shared();
+showSync();
+if (shared()){
+  setInterval(sync, 60000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) sync(); });
+}
+checkIncoming();
+// 반별 링크(…/?반=1-3)로 처음 열면 그 반으로 자동 설정
+(function classFromLink(){
+  const q = new URLSearchParams(location.search);
+  const v = q.get('반') || q.get('gc');
+  if (!v || store.get('bag-cfg', null) || !/^(1-[123]|2-[123]|3-[12])$/.test(v)) return;
+  [cfg.grade, cfg.cls] = v.split('-');
+  if (cfg.grade === '3') cfg.track = '';
+  store.set('bag-cfg', cfg);
+  if (cfg.grade !== '3') openSetting(true);   // 특성화 과목만 고르면 끝
+})();
+if (!store.get('bag-cfg', null) && !incoming) openSetting(true);
+render();
+</script>
+</body>
+</html>
